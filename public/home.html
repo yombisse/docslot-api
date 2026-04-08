@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudifyAPI - Documentation</title>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 { 
+            font-size: 2.5em; 
+            margin-bottom: 10px; 
+        }
+
+        .header p { 
+            font-size: 1.2em; 
+            opacity: 0.9; 
+        }
+
+        .content { padding: 40px; }
+
+        .section { margin-bottom: 30px; }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .endpoint {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .GET { background: #28a745; color: white; }
+        .POST { background: #007bff; color: white; }
+        .PUT { background: #ffc107; color: #333; }
+        .DELETE { background: #dc3545; color: white; }
+
+        .path { 
+            font-family: monospace; 
+            font-size: 1.1em; 
+            color: #333; 
+        }
+
+        .description { 
+            margin-top: 10px; 
+            color: #666; 
+        }
+
+        .protected { 
+            background: #ffc107;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="header">
+            <h1>🎓 StudifyAPI</h1>
+            <p>API de gestion académique pour étudiants et authentification</p>
+        </div>
+
+        <div class="content">
+
+            <!-- Authentification -->
+            <div class="section">
+                <h2>🔐 Authentification</h2>
+
+                <div class="endpoint">
+                    <span class="method POST">POST</span>
+                    <span class="path">/api/auth/register</span>
+                    <span class="protected">Public</span>
+                    <p class="description">Créer un nouveau compte utilisateur</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method POST">POST</span>
+                    <span class="path">/api/auth/login</span>
+                    <span class="protected">Public</span>
+                    <p class="description">Se connecter et obtenir un token JWT</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method POST">POST</span>
+                    <span class="path">/api/auth/logout</span>
+                    <span class="protected">Public</span>
+                    <p class="description">Se déconnecter</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method POST">POST</span>
+                    <span class="path">/api/auth/check-email</span>
+                    <span class="protected">Public</span>
+                    <p class="description">Vérifier si un email existe déjà</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method POST">POST</span>
+                    <span class="path">/api/auth/forgot-password</span>
+                    <span class="protected">Public</span>
+                    <p class="description">Demander une réinitialisation de mot de passe</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method GET">GET</span>
+                    <span class="path">/api/auth/profile</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Obtenir le profil de l'utilisateur connecté</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method POST">POST</span>
+                    <span class="path">/api/auth/change-password</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Changer le mot de passe</p>
+                </div>
+            </div>
+
+            <!-- Étudiants -->
+            <div class="section">
+                <h2>👥 Étudiants</h2>
+
+                <div class="endpoint">
+                    <span class="method GET">GET</span>
+                    <span class="path">/api/students</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Lister tous les étudiants</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method GET">GET</span>
+                    <span class="path">/api/students/stats</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Obtenir les statistiques des étudiants</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method GET">GET</span>
+                    <span class="path">/api/students/:id</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Obtenir un étudiant par son ID</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method POST">POST</span>
+                    <span class="path">/api/students</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Créer un nouvel étudiant</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method PUT">PUT</span>
+                    <span class="path">/api/students/:id</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Modifier un étudiant</p>
+                </div>
+
+                <div class="endpoint">
+                    <span class="method DELETE">DELETE</span>
+                    <span class="path">/api/students/:id</span>
+                    <span class="protected">🔒 Protégé</span>
+                    <p class="description">Supprimer un étudiant</p>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="section">
+                <h2>📝 Notes importantes</h2>
+
+                <div class="endpoint">
+                    <p><strong>🔒 Endpoints protégés :</strong> Nécessitent un token JWT dans le header :</p>
+
+                    <pre style="background:#333; color:#fff; padding:15px; border-radius:5px; margin-top:10px;">
+Authorization: Bearer &lt;votre_token&gt;
+                    </pre>
+                </div>
+
+                <div class="endpoint">
+                    <p><strong>📧 Format d'email :</strong> email@domain.com</p>
+                    <p><strong>📱 Format téléphone :</strong> +225XXXXXXXXX</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p>© 2026 Softwave | Fandie Yombissé Michel</p>
+            <p>Version 1.0.0 • API REST • Node.js • Express • MySQL</p>
+        </div>
+
+    </div>
+</body>
+</html>

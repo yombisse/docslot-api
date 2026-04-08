@@ -1,0 +1,65 @@
+# ========================================
+# 1️⃣ Inscription (POST /api/auth/register)
+# ========================================
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "nom": "Fandie",
+  "prenom": "Yombisse",
+  "email": "yombissefandie@gmail.com",
+  "password": "Admin@123",
+  "role": "patient",
+  "telephone": "70000000",
+  "profile_url": ""
+}
+
+# ========================================
+# 2️⃣ Connexion (POST /api/auth/login)
+# ========================================
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "yombissefandie@gmail.com",
+  "password": "Admin@123"
+}
+
+# ========================================
+# 3️⃣ Mot de passe oublié (POST /api/auth/forgot-password)
+# ========================================
+POST http://localhost:3000/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "yombissefandie@gmail.com"
+}
+
+# ========================================
+# 4️⃣ Vérifier si un email existe (POST /api/auth/check-email)
+# ========================================
+POST http://localhost:3000/api/auth/check-email
+Content-Type: application/json
+
+{
+  "email": "yombissefandie@gmail.com"
+}
+
+# ========================================
+# 5️⃣ Déconnexion (POST /api/auth/logout) – token requis
+# ========================================
+POST http://localhost:3000/api/auth/logout
+Content-Type: application/json
+Authorization: Bearer <VOTRE_TOKEN_ICI>
+
+# ========================================
+# 6️⃣ Changer le mot de passe (POST /api/auth/change-password) – token requis
+# ========================================
+POST http://localhost:3000/api/auth/change-password
+Content-Type: application/json
+Authorization: Bearer <VOTRE_TOKEN_ICI>
+
+{
+  "oldPassword": "Admin@123",
+  "newPassword": "Admin@456"
+}
