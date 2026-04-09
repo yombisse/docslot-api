@@ -6,11 +6,10 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 // Liste tous les utilisateurs
 router.get("/", authMiddleware, userController.getAll);
-
+// VOIR son profile
+router.get("/profile", authMiddleware, userController.profile);
 // Voir un utilisateur
 router.get("/:id", authMiddleware, userController.getById);
-// voir son profile
-router.get("/profile", authMiddleware, userController.profile);
 //Mettre à jour un utilisateur
 router.put("/:id", authMiddleware, validateUpdateUser, userController.update);
 
