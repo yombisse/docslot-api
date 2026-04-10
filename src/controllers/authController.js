@@ -139,7 +139,7 @@ const authController = {
     changePassword: async (req, res) => {
         try {
         const {oldPassword, newPassword } = req.body;
-        const userId = req.user.id_user; // ⚡ Récupérer l'ID de l'utilisateur connecté depuis le token
+        const userId = req.user.id; // Récupérer l'ID de l'utilisateur connecté depuis le token
 
         if (!oldPassword || !newPassword) {
             return res.status(400).json({ success: false, errors: { general: "Champs requis manquants" } });

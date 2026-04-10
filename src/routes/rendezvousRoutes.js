@@ -16,8 +16,6 @@ router.post("/", authMiddleware, rdvController.create);
 
 // confirmer un rendez-vous
 router.put("/:id", authMiddleware,validateUpdateRendezVous, rdvController.confirm);
-/* OLD dupe: Second router.put("/:id", ...) overrides confirm. 
-Reason: Only cancel works, confirm dead. Fix: Separate endpoints. */
 
 // annuler un RDV
 router.put("/:id/cancel", authMiddleware, validateUpdateRendezVous, rdvController.cancel);

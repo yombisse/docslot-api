@@ -9,11 +9,11 @@ router.get("/", authMiddleware, userController.getAll);
 // VOIR son profile
 router.get("/profile", authMiddleware, userController.profile);
 // Voir un utilisateur
-router.get("/:id", authMiddleware, userController.getById);
+//router.get("/:id", authMiddleware, userController.getById);
 //Mettre à jour un utilisateur
-router.put("/:id", authMiddleware, validateUpdateUser, userController.update);
+router.put("/", authMiddleware, validateUpdateUser, userController.update);
 
 //  Supprimer un utilisateur (soft delete)
-router.delete("/:id", authMiddleware, userController.delete);
+router.delete("/:id", authMiddleware, userController.softDelete);
 
 module.exports = router;

@@ -1,221 +1,191 @@
+const bcrypt = require("bcryptjs");
 
 const userController = {
-    //  Récupérer tous les utilisateurs
-    /* OLD: let query = "SELECT * FROM users"; 
-    Reason: No soft-delete filter → returns deleted users. */
 
+    // ================== GET ALL ==================
     getAll: async (req, res) => {
         try {
-            let query = "SELECT * FROM users WHERE deleted_at IS NULL";
-            const [results] = await req.db.query(query);
+            const roleFilter = req.query.role; // facultatif : patient / medecin / null
+            let rows;
 
-            return res.json({
-                success: true,
-                data: results,
-                count: results.length
-            });
-        } catch (err) {
-            return res.status(500).json({ success: false, errors: { general: err.message } });
-        }
-    },
-
-    //  Récupérer par ID
-    getById: async (req, res) => {
-        try {
-            const [results] = await req.db.query("SELECT * FROM users WHERE id_user = ?", [req.params.id]);
-
-            if (results.length === 0) {
-                return res.status(404).json({ success: false, errors: { general: "Utilisateur non trouvé" } });
+            if (roleFilter === 'patient') {
+                [rows] = await req.db.query(`
+                    SELECT u.id_user, u.nom, u.prenom, u.email, u.telephone, u.profile_url, u.role,
+                           p.adresse, p.sexe, p.date_naissance
+                    FROM users u
+                    LEFT JOIN patient p ON u.id_user = p.id_user
+                    WHERE u.deleted_at IS NULL AND u.role = ?
+                `, [roleFilter]);
+            } else if (roleFilter === 'medecin') {
+                [rows] = await req.db.query(`
+                    SELECT u.id_user, u.nom, u.prenom, u.email, u.telephone, u.profile_url, u.role,
+                           m.specialite, m.duree_creneau
+                    FROM users u
+                    LEFT JOIN medecins m ON u.id_user = m.id_user
+                    WHERE u.deleted_at IS NULL AND u.role = ?
+                `, [roleFilter]);
+            } else {
+                [rows] = await req.db.query(`
+                    SELECT u.id_user, u.nom, u.prenom, u.email, u.telephone, u.profile_url, u.role
+                    FROM users u
+                    WHERE u.deleted_at IS NULL
+                `);
             }
 
-            return res.json({ success: true, data: results[0] });
+            return res.json({ success: true, data: rows });
+
         } catch (err) {
             return res.status(500).json({ success: false, errors: { general: err.message } });
         }
     },
- //  Route profile
-    // getProfile général
+
+    // ================== PROFILE ==================
     profile: async (req, res) => {
-    try {
-        const [userRows] = await req.db.query(
-        "SELECT id_user, nom, prenom, email, telephone, profile_url, role FROM users WHERE id_user=?",
-        [req.user.id]
-        );
+        try {
+            const userId = req.user.id;
+            const role = req.user.role;
 
-        if (!userRows.length) {
-        return res.status(404).json({ success: false, errors: { general: "Utilisateur introuvable" } });
+            let rows;
+            if (role === 'patient') {
+                [rows] = await req.db.query(`
+                    SELECT u.id_user, u.nom, u.prenom, u.email, u.telephone, u.profile_url, u.role,
+                           p.adresse, p.sexe, p.date_naissance
+                    FROM users u
+                    LEFT JOIN patients p ON u.id_user = p.id_user
+                    WHERE u.id_user = ? AND u.deleted_at IS NULL
+                `, [userId]);
+            } else if (role === 'medecin') {
+                [rows] = await req.db.query(`
+                    SELECT u.id_user, u.nom, u.prenom, u.email, u.telephone, u.profile_url, u.role,
+                           m.specialite, m.duree_creneau
+                    FROM users u
+                    LEFT JOIN medecins m ON u.id_user = m.id_user
+                    WHERE u.id_user = ? AND u.deleted_at IS NULL
+                `, [userId]);
+            } else {
+                [rows] = await req.db.query(`
+                    SELECT u.id_user, u.nom, u.prenom, u.email, u.telephone, u.profile_url, u.role
+                    FROM users u
+                    WHERE u.id_user = ? AND u.deleted_at IS NULL
+                `, [userId]);
+            }
+
+            if (!rows.length) return res.status(404).json({ success: false, errors: { general: "Utilisateur introuvable" } });
+
+            return res.json({ success: true, data: rows[0] });
+
+        } catch (err) {
+            return res.status(500).json({ success: false, errors: { general: err.message } });
         }
-
-        const user = userRows[0];
-
-        let extra = {};
-        if (user.role === 'patient') {
-        const [rows] = await req.db.query(
-            "SELECT date_naissance, adresse, sexe FROM patients WHERE id_user=?",
-            [user.id_user]
-        );
-        extra = rows[0] || { date_naissance: '', adresse: '', sexe: '' };
-        } else if (user.role === 'medecin') {
-        const [rows] = await req.db.query(
-            "SELECT specialite, duree_creneau FROM medecins WHERE id_user=?",
-            [user.id_user]
-        );
-        extra = rows[0] || { specialite: '', duree_creneau: 30 };
-        }
-
-        return res.json({ success: true, data: { ...user, ...extra } });
-
-    } catch (err) {
-        console.log('Erreur profile:', err);
-        return res.status(500).json({ success: false, errors: { general: err.message } });
-    }
     },
 
-    // updateProfile général
-    updateProfile: async (req, res) => {
+    // ================== CREATE ==================
+    create: async (req, res) => {
     try {
-        const { nom, prenom, telephone, profile_url, role, ...rest } = req.body;
+        // Champs explicites depuis req.body
+        const { nom, prenom, email, password, telephone, role,
+                adresse, sexe, date_naissance, specialite, duree_creneau } = req.body;
 
-        // update users
-        await req.db.query(
-        "UPDATE users SET nom=?, prenom=?, telephone=?, profile_url=? WHERE id_user=?",
-        [nom, prenom, telephone, profile_url, req.user.id]
+        // Hash du mot de passe fourni ou mot de passe par défaut
+        const hashedPassword = await bcrypt.hash(password || "default123", 10);
+
+        // Création de l'utilisateur dans la table users
+        const [result] = await req.db.query(
+            `INSERT INTO users (nom, prenom, email, password, telephone, role)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [nom, prenom, email, hashedPassword, telephone, role]
         );
 
+        const userId = result.insertId;
+
+        // Création du profil selon le rôle
         if (role === 'patient') {
-        const [rows] = await req.db.query(
-            "SELECT id_patient FROM patients WHERE id_user=?",
-            [req.user.id]
-        );
-        if (rows.length) {
             await req.db.query(
-            "UPDATE patients SET date_naissance=?, adresse=?, sexe=? WHERE id_user=?",
-            [rest.date_naissance, rest.adresse, rest.sexe, req.user.id]
+                `INSERT INTO patients (id_user, adresse, sexe, date_naissance)
+                 VALUES (?, ?, ?, ?)`,
+                [userId, adresse || "", sexe || "", date_naissance || null]
             );
-        } else {
-            await req.db.query(
-            "INSERT INTO patients (id_user, date_naissance, adresse, sexe) VALUES (?, ?, ?, ?)",
-            [req.user.id, rest.date_naissance, rest.adresse, rest.sexe]
-            );
-        }
         } else if (role === 'medecin') {
-        const [rows] = await req.db.query(
-            "SELECT id_medecin FROM medecins WHERE id_user=?",
-            [req.user.id]
-        );
-        if (rows.length) {
             await req.db.query(
-            "UPDATE medecins SET specialite=?, duree_creneau=? WHERE id_user=?",
-            [rest.specialite, rest.duree_creneau, req.user.id]
+                `INSERT INTO medecins (id_user, specialite, duree_creneau)
+                 VALUES (?, ?, ?)`,
+                [userId, specialite || "", duree_creneau || 30]
             );
-        } else {
-            await req.db.query(
-            "INSERT INTO medecins (id_user, specialite, duree_creneau) VALUES (?, ?, ?)",
-            [req.user.id, rest.specialite, rest.duree_creneau || 30]
-            );
-        }
         }
 
-        return res.json({ success: true });
+        // Retour
+        return res.status(201).json({
+            success: true,
+            message: `Utilisateur ${role} créé avec succès`,
+            data: {
+                id_user: userId,
+                nom,
+                prenom,
+                email,
+                telephone,
+                role,
+                adresse: adresse || null,
+                sexe: sexe || null,
+                date_naissance: date_naissance || null,
+                specialite: specialite || null,
+                duree_creneau: duree_creneau || null,
+                password: password
+            }
+        });
+
     } catch (err) {
-        console.log('Erreur updateProfile:', err);
+        console.error("Erreur création utilisateur:", err);
         return res.status(500).json({ success: false, errors: { general: err.message } });
     }
-    },
-        //  Mettre à jour
+},
+
     update: async (req, res) => {
         try {
-            const { nom, prenom, email, password,telephone, profile_url, role } = req.body || {};
-            const userId = req.user.id_user;
+            const { nom, prenom, email, password, telephone, profile_url, adresse, sexe, date_naissance, specialite, duree_creneau } = req.body || {};
+            const userId = req.user.id;
+            const role = req.user.role;
 
-            //Récupérer l'utilisateur actuel
-            const [curentResults] = await req.db.query(
-                "SELECT * FROM users WHERE id_user = ?",
-                [userId]
-            );
+            const [current] = await req.db.query("SELECT * FROM users WHERE id_user=?", [userId]);
+            if (!current.length) return res.status(404).json({ success: false, errors: { general: "Utilisateur introuvable" } });
 
-            if (curentResults.length === 0) {
-                return res.status(404).json({ success: false, errors: { general: "Utilisateur introuvable" } });
-            }
-
-            const existingUser = curentResults[0];
-            let hashedPassword = existingUser.password;
-            if (password && password.trim() !== "") {
-                hashedPassword = await bcrypt.hash(password, 10);
-            }
-
-            const updatedData = {
-                nom: nom ?? existingUser.nom,
-                prenom: prenom ?? existingUser.prenom,
-                email: email ?? existingUser.email,
-                telephone: telephone ?? existingUser.telephone,
-                profile_url: profile_url ?? existingUser.profile_url,
-                role: role ?? existingUser.role,
-                password: hashedPassword
-            };
-            /* OLD: await req.db.promise().query(
-                `UPDATE users 
-                SET nom=?, prenom=?, email=?, password=?,telephone=? profile_url=?, role=? 
-                WHERE id=?`,
-                Reason: Syntax error - missing comma after telephone=? → SQL fail. */
+            const existingUser = current[0];
+            const hashedPassword = password && password.trim() !== "" ? await bcrypt.hash(password, 10) : existingUser.password;
 
             await req.db.query(
-                `UPDATE users 
-                SET nom=?, prenom=?, email=?, password=?, telephone=?, profile_url=?, role=? 
-                WHERE id_user=?`,
-                [
-                    updatedData.nom,
-                    updatedData.prenom,
-                    updatedData.email,
-                    updatedData.password,
-                    updatedData.telephone,
-                    updatedData.profile_url,
-                    updatedData.role,
-                    userId
-                ]
+                `UPDATE users SET nom=?, prenom=?, email=?, password=?, telephone=?, profile_url=? WHERE id_user=?`,
+                [nom ?? existingUser.nom, prenom ?? existingUser.prenom, email ?? existingUser.email, hashedPassword,
+                 telephone ?? existingUser.telephone, profile_url ?? existingUser.profile_url, userId]
             );
 
-            const [results] = await req.db.query(
-                "SELECT id_user, nom, prenom, email, telephone, profile_url, role FROM users WHERE id_user=?",
-                [userId]
-            );
+            if (role === 'patient') {
+                await req.db.query(
+                    `UPDATE patients SET adresse=?, sexe=?, date_naissance=? WHERE id_user=?`,
+                    [adresse, sexe, date_naissance, userId]
+                );
+            } else if (role === 'medecin') {
+                await req.db.query(
+                    `UPDATE medecins SET specialite=?, duree_creneau=? WHERE id_user=?`,
+                    [specialite, duree_creneau, userId]
+                );
+            }
 
-            return res.status(200).json({
-                success: true,
-                message: "Utilisateur mis à jour avec succès",
-                data: results[0]
-            });
+            return res.json({ success: true, message: "Profil mis à jour" });
 
         } catch (err) {
             return res.status(500).json({ success: false, errors: { general: err.message } });
         }
     },
 
-
-    //  Supprimer
-    delete: async (req, res) => {
+    // ================== SOFT DELETE ==================
+    softDelete: async (req, res) => {
         try {
             const userId = req.params.id;
-             //  Récupérer l'utilisateur actuel
-            const [curentResults] = await req.db.query(
-                "SELECT deleted_at FROM users WHERE id_user = ?",
-                [userId]
-            );
-
-            if (curentResults.length === 0) {
-                return res.status(404).json({ success: false, errors: { general: "Utilisateur introuvable" } });
-            }
-
-            const [result] = await req.db.query("UPDATE users SET deleted_at=? WHERE id_user=?", [CURRENT_TIMESTAMP,userId]);
-
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ success: false, errors: { general: "Utilisateur introuvable" } });
-            }
-
-            return res.status(200).json({ success: true, message: "Utilisateur supprimé avec succès!" });
+            await req.db.query("UPDATE users SET deleted_at = NOW() WHERE id_user=?", [userId]);
+            return res.json({ success: true, message: "Utilisateur supprimé (soft delete)" });
         } catch (err) {
             return res.status(500).json({ success: false, errors: { general: err.message } });
         }
-    },
-}
+    }
+};
+
 module.exports = userController;
