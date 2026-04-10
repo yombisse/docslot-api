@@ -2,27 +2,26 @@ const express = require("express");
 const router = express.Router();
 const notificationController = require("../controllers/notificationController");
 const authMiddleware = require("../middleware/authMiddleware");
-const { validateCreateNotification } = require("../middleware/notificationValidateur");
 
-// Toutes notifications (admin)
-router.get("/", authMiddleware, notificationController.getAll);
+
+router.get("/unread-count", authMiddleware, notificationController.getUnreadCount);
 
 // Mes notifications
-router.get("/my-notifications", authMiddleware, notificationController.getMyNotifications);
+router.get("/me", authMiddleware, notificationController.getMyNotifications);
 
-// Notification spécifique
+// Une notification
 router.get("/:id", authMiddleware, notificationController.getById);
 
-// Créer notification
-router.post("/", authMiddleware, validateCreateNotification, notificationController.create);
-
-// Marquer comme lue
+// Marquer une comme lue
 router.put("/:id/read", authMiddleware, notificationController.markAsRead);
 
 // Marquer toutes comme lues
-router.put("/my-notifications/read-all", authMiddleware, notificationController.markAllAsRead);
+router.put("/read-all", authMiddleware, notificationController.markAllAsRead);
 
-// Supprimer
+// Supprimer (optionnel)
 router.delete("/:id", authMiddleware, notificationController.delete);
+
+// Admin : lecture globale
+router.get("/", authMiddleware, notificationController.getAll);
 
 module.exports = router;
