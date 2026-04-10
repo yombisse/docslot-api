@@ -28,7 +28,7 @@
 
 ### Installation
 ```bash
-git clone <repo-url>
+git clone https://github.com/yombisse/docslot-api.git
 cd docslot-api
 npm install
 ```
@@ -56,7 +56,7 @@ npm start
 node index.js
 ```
 
-**API prête sur :** `http://localhost:3000/api`
+**API disponnible sur :** `http://localhost:3000/api`
 
 ### Test rapide
 ```bash
@@ -151,23 +151,8 @@ disponibilites → creneaux → rendezvous (patients × medecins)
 ```
 Codes : 400 (validation), 401 (auth), 404 (non trouvé), 500 (serveur).
 
-## 🧪 Tests & Outils
-- **Insomnia/Postman** : Importez endpoints depuis docs.
-- **Swagger** : À ajouter (`npm i swagger-ui-express`).
-- **Tests** : `npm test` (à implémenter).
-
-## 🤝 Contribution
-1. Fork → Clone → `npm i`
-2. Créez branch `feature/xxx`
-3. Commit → PR
-
 ## 📄 Licence
-ISC
+Libre et gratuit
 
 ## 👨‍💻 Auteur
-DocSlot Team
-
----
-
-*Docs générées automatiquement. Dernière MAJ : `date`* 
-
+FANDIE YOMBISSE
