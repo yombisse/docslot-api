@@ -142,57 +142,82 @@ const rendezVousController = {
             res.status(500).json({ success: false, errors: { general: err.message } });
         }
     },
-
-    // Prendre un rendez-vous
     create: async (req, res) => {
         const conn = await req.db.getConnection();
+
         try {
+            console.log("🔥 CREATE RDV EXECUTÉ");
+            console.log("USER:", req.user);
+            console.log("BODY:", req.body);
+
             await conn.beginTransaction();
 
             const { id_creneau, motif = '' } = req.body;
 
-            // Vérifier que le patient a un profil
+            console.log("1️⃣ Patient check...");
+
             const [patient] = await conn.query(
                 `SELECT id_patient FROM patients WHERE id_user = ?`,
                 [req.user.id]
             );
-            if (patient.length === 0)
+
+            if (patient.length === 0) {
+                console.log("❌ Patient introuvable");
                 throw new Error("Veuillez compléter votre profil avant de prendre un rendez-vous");
+            }
 
             const id_patient = patient[0].id_patient;
 
-            // Vérifier que le créneau est libre
+            console.log("2️⃣ ID patient =", id_patient);
+
             const [creneau] = await conn.query(`
                 SELECT statut, id_disponibilite, date_creneau, heure_creneau
                 FROM creneaux
-WHERE id_creneau = ? AND statut='libre' AND CONCAT(date_creneau, ' ', heure_creneau) > NOW()
+                WHERE id_creneau = ? AND statut='libre'
+                AND CONCAT(date_creneau, ' ', heure_creneau) > NOW()
             `, [id_creneau]);
 
-            if (creneau.length === 0)
-throw new Error("Créneau passé ou non disponible");
+            if (creneau.length === 0) {
+                console.log("❌ Créneau invalide");
+                throw new Error("Créneau passé ou non disponible");
+            }
 
-            // Créer le RDV
+            console.log("3️⃣ Créneau OK =", creneau[0]);
+
+            console.log("4️⃣ Insertion RDV...");
+
             const [result] = await conn.query(`
                 INSERT INTO rendezvous (id_patient, id_creneau, motif, statut) 
                 VALUES (?, ?, ?, 'en_attente')
             `, [id_patient, id_creneau, motif]);
-            const id_rdv = result.insertId;
 
-            // Bloquer le créneau
+            console.log("5️⃣ RDV créé ID =", result.insertId);
+
             await conn.query(`
                 UPDATE creneaux SET statut='reserve' WHERE id_creneau=?
             `, [id_creneau]);
 
-            // TODO: Ajouter notification push (ex: à l'admin et au médecin)
-            // await sendNotification(id_medecin, `Un nouveau rendez-vous a été pris pour ${creneau[0].date_creneau} à ${creneau[0].heure_creneau}`);
+            console.log("6️⃣ Créneau bloqué");
 
             await conn.commit();
 
-            res.status(201).json({ success: true, message: "Rendez-vous pris avec succès" });
+            console.log("7️⃣ COMMIT OK");
+
+            res.status(201).json({
+                success: true,
+                message: "Rendez-vous pris avec succès",
+                id_rdv: result.insertId
+            });
 
         } catch (err) {
             await conn.rollback();
-            res.status(400).json({ success: false, errors: { general: err.message } });
+            console.log("❌ ERROR CREATE RDV:", err.message);
+
+            res.status(400).json({
+                success: false,
+                errors: { general: err.message }
+            });
+
         } finally {
             conn.release();
         }

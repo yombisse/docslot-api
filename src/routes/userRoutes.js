@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
-const {validateUpdateUser } = require("../middleware/userValidateur");
+const { validateCreateUser, validateUpdateUser } = require("../middleware/userValidateur");
 const authMiddleware = require("../middleware/authMiddleware");
 
 // Liste tous les utilisateurs
@@ -15,5 +15,8 @@ router.put("/", authMiddleware, validateUpdateUser, userController.update);
 
 //  Supprimer un utilisateur (soft delete)
 router.delete("/:id", authMiddleware, userController.softDelete);
+
+// Créer un nouvel utilisateur
+router.post("/create", validateCreateUser, userController.create);
 
 module.exports = router;

@@ -51,46 +51,73 @@ const medecinController = {
         }
     },
 
-    getAvailableSummary: async (req, res) => {
-        try {
-            const [results] = await req.db.query(`
-                SELECT 
-                    u.id_user,
-                    u.nom,
-                    u.prenom,
-                    u.telephone,
-                    u.profile_url,
-                    m.id_medecin,
-                    m.specialite,
-                    COUNT(c.id_creneau) as nb_creneaux_disponibles
-                FROM users u
-                INNER JOIN medecins m ON u.id_user = m.id_user
-                INNER JOIN disponibilites d ON m.id_medecin = d.id_medecin
-                INNER JOIN creneaux c ON d.id_disponibilite = c.id_disponibilite
-                LEFT JOIN rendezvous r ON c.id_creneau = r.id_creneau
-                WHERE u.role = 'medecin'
-                  AND u.deleted_at IS NULL
-                  AND d.statut = 'active'
-                  AND c.statut = 'libre'
-                  AND r.id_rdv IS NULL
-                  AND c.date_creneau >= CURDATE()
-                GROUP BY m.id_medecin, u.id_user, u.nom, u.prenom, u.telephone, u.profile_url, m.specialite
-                HAVING nb_creneaux_disponibles > 0
-                ORDER BY nb_creneaux_disponibles DESC, u.nom ASC
-            `);
+   getAvailableSummary: async (req, res) => {
+    try {
+        const [results] = await req.db.query(`
+            SELECT 
+                u.id_user,
+                u.nom,
+                u.prenom,
+                u.telephone,
+                u.profile_url,
+                m.id_medecin,
+                m.specialite,
 
-            return res.json({ success: true, data: results, count: results.length });
+                COUNT(
+                    CASE 
+                        WHEN c.statut = 'libre'
+                        AND c.date_creneau >= CURDATE()
+                        AND r.id_rdv IS NULL
+                        THEN 1
+                    END
+                ) AS nb_creneaux_disponibles
 
-        } catch (err) {
-            console.error('getAvailableSummary medecins error:', err);
-            return res.status(500).json({ success: false, errors: { general: err.message } });
-        }
-    },
+            FROM users u
 
+            INNER JOIN medecins m 
+                ON m.id_user = u.id_user
+
+            LEFT JOIN disponibilites d 
+                ON d.id_medecin = m.id_medecin
+
+            LEFT JOIN creneaux c 
+                ON c.id_disponibilite = d.id_disponibilite
+
+            LEFT JOIN rendezvous r 
+                ON r.id_creneau = c.id_creneau
+
+            WHERE u.role = 'medecin'
+            AND u.deleted_at IS NULL
+
+            GROUP BY 
+                u.id_user,
+                u.nom,
+                u.prenom,
+                u.telephone,
+                u.profile_url,
+                m.id_medecin,
+                m.specialite
+
+            ORDER BY nb_creneaux_disponibles DESC, u.nom ASC
+        `);
+
+        return res.json({
+            success: true,
+            data: results,
+            count: results.length
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            errors: { general: err.message }
+        });
+    }
+},
     getAvailableSlotsByMedecin: async (req, res) => {
         try {
             const id_medecin = req.params.id;
-            
+
             const [results] = await req.db.query(`
                 SELECT 
                     c.id_creneau,
@@ -102,11 +129,20 @@ const medecinController = {
                     m.id_medecin,
                     m.specialite,
                     m.duree_creneau
-                FROM users u
-                INNER JOIN medecins m ON u.id_user = m.id_user
-                INNER JOIN disponibilites d ON m.id_medecin = d.id_medecin
-                INNER JOIN creneaux c ON d.id_disponibilite = c.id_disponibilite
-                LEFT JOIN rendezvous r ON c.id_creneau = r.id_creneau
+                FROM creneaux c
+
+                INNER JOIN disponibilites d 
+                    ON c.id_disponibilite = d.id_disponibilite
+
+                INNER JOIN medecins m 
+                    ON d.id_medecin = m.id_medecin
+
+                INNER JOIN users u 
+                    ON u.id_user = m.id_user
+
+                LEFT JOIN rendezvous r 
+                    ON c.id_creneau = r.id_creneau
+
                 WHERE m.id_medecin = ?
                 AND u.role = 'medecin'
                 AND u.deleted_at IS NULL
@@ -114,14 +150,22 @@ const medecinController = {
                 AND c.statut = 'libre'
                 AND r.id_rdv IS NULL
                 AND c.date_creneau >= CURDATE()
+
                 ORDER BY c.date_creneau ASC, c.heure_creneau ASC
             `, [id_medecin]);
 
-            return res.json({ success: true, data: results, count: results.length });
+            return res.json({
+                success: true,
+                data: results,
+                count: results.length
+            });
 
         } catch (err) {
             console.error('getAvailableSlotsByMedecin error:', err);
-            return res.status(500).json({ success: false, errors: { general: err.message } });
+            return res.status(500).json({
+                success: false,
+                errors: { general: err.message }
+            });
         }
     },
 

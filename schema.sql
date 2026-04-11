@@ -72,7 +72,7 @@ CREATE TABLE rendezvous (
 CREATE TABLE notifications (
     id_notification INT AUTO_INCREMENT PRIMARY KEY,
     id_user INT NOT NULL, -- destinataire (patient ou médecin)
-    type ENUM('nouveau_rdv','rdv_confirme','rdv_annule') NOT NULL,
+    type VARCHAR(255),
     message VARCHAR(255) NOT NULL,
     lu BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

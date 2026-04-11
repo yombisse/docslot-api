@@ -9,17 +9,17 @@ const validateCreateUser = (req, res, next) => {
   const { nom, prenom, email, password, telephone, profile_url, role } = req.body;
   const errors = {};
 
-  // Nom et prénom (optionnels mais >1 caractère si fournis)
-  if (nom !== undefined && nom.trim().length < 2) {
-    errors.nom = "Le nom doit contenir au moins 2 caractères.";
+  // Nom et prénom obligatoires
+  if (!nom || nom.trim().length < 2) {
+    errors.nom = "Le nom est obligatoire et doit contenir au moins 2 caractères.";
   }
-  if (prenom !== undefined && prenom.trim().length < 2) {
-    errors.prenom = "Le prénom doit contenir au moins 2 caractères.";
+  if (!prenom || prenom.trim().length < 2) {
+    errors.prenom = "Le prénom est obligatoire et doit contenir au moins 2 caractères.";
   }
 
   // Email obligatoire et format
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.email = "Email obligatoire et format invalide.";
+    errors.email = "Email obligatoire et au format invalide.";
   }
 
   // Password obligatoire et règles
@@ -36,16 +36,17 @@ const validateCreateUser = (req, res, next) => {
   }
 
   // Normalisation rôle
-  let normalizedRole = role ? role.toLowerCase() : "patient";
+  let normalizedRole = role ? role.toLowerCase() : null;
   if (normalizedRole === "administrateur") normalizedRole = "administrateur";
   else if (normalizedRole === "medecin") normalizedRole = "medecin";
   else normalizedRole = "patient";
 
   const allowedRoles = ["patient", "medecin", "administrateur"];
-  if (!allowedRoles.includes(normalizedRole)) {
-    errors.role = "Le rôle doit être 'patient', 'medecin' ou 'administrateur'.";
+  if (!role || !allowedRoles.includes(normalizedRole)) {
+    errors.role = "Le rôle est obligatoire et doit être 'patient', 'medecin' ou 'administrateur'.";
+  } else {
+    req.body.role = normalizedRole;
   }
-  req.body.role = normalizedRole;
 
   if (Object.keys(errors).length > 0) {
     return res.status(400).json({ success: false, errors });
