@@ -52,6 +52,8 @@ app.use("/api/patients", require("./src/routes/patientRoutes"));
 app.use("/api/medecins", require("./src/routes/medecinRoutes"));
 app.use("/api/disponibilites", require("./src/routes/disponibiliteRoutes"));
 app.use("/api/rendezvous", require("./src/routes/rendezvousRoutes"));
+app.use("/api/notifications", require("./src/routes/notificationRoutes"));
+app.use("/api/admin", require("./src/routes/adminRoutes"));
 
 
 // Middleware de gestion d'erreurs

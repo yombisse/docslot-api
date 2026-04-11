@@ -181,7 +181,7 @@ const userController = {
         try {
             const userId = req.params.id;
             await req.db.query("UPDATE users SET deleted_at = NOW() WHERE id_user=?", [userId]);
-            return res.json({ success: true, message: "Utilisateur supprimé (soft delete)" });
+            return res.json({ success: true, message: "Utilisateur supprimé" });
         } catch (err) {
             return res.status(500).json({ success: false, errors: { general: err.message } });
         }

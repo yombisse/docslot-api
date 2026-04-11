@@ -1,52 +1,60 @@
 # 🚀 DocSlot API
 
 [![Node.js](https://img.shields.io/badge/Node.js-v20-green.svg)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express-4.x-blue.svg)](https://expressjs.com/)
+[![Express](https://img.shields.io/badge/Express-5.0+-blue.svg)](https://expressjs.com/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.x-orange.svg)](https://www.mysql.com/)
+[![JWT](https://img.shields.io/badge/JWT-Auth-yellow.svg)](https://jwt.io/)
 [![License ISC](https://img.shields.io/badge/License-ISC-purple.svg)](LICENSE)
 
 ## 📄 Description
-**DocSlot API** est une API RESTful complète pour la gestion de rendez-vous médicaux. Elle permet aux **patients** de prendre des rendez-vous et aux **médecins** de gérer leurs disponibilités et plannings.
 
-**Fonctionnalités principales :**
-- 👥 Gestion multi-rôles (patient, médecin)
-- 📅 Prise de rendez-vous avec créneaux automatiques
-- 🔐 Authentification JWT sécurisée
-- 🗓️ Planning intelligent (créneaux libres/réservés)
-- 📱 Compatible mobile/web
+**DocSlot API** est une API RESTful complète pour la **gestion de rendez-vous médicaux**. 
 
-**Base de données :** MySQL avec transactions ACID.
+**Rôles supportés :**
+- 👤 **Patient** : Prendre/voir/annuler ses RDV
+- 👨‍⚕️ **Médecin** : Gérer disponibilités, créneaux auto, confirmer RDV  
+- 👨‍💼 **Admin** : Dashboard stats, gestion globale
 
-**Status API :** `GET /api` ✅
+**Fonctionnalités clés :**
+- 🔐 Authentification JWT + validation middlewares
+- 📅 Planning intelligent : disponibilités → créneaux auto (30min par défaut) → réservation
+- 🔔 Notifications automatiques (triggers MySQL) + gestion
+- 📊 Admin dashboard (stats users/RDV/dispos)
+- 🛡️ Transactions ACID, soft deletes, validation complète
+- ✅ Testé : `GET /api` → `{\"success\":true,\"message\":\"Bienvenue sur l'API DocSlot 🚀\"}`
+
+**Stack technique :** Node.js/Express 5+/MySQL 8+/mysql2 pool/JWT/bcryptjs
 
 ## 🚀 Démarrage rapide
 
 ### Prérequis
-- Node.js ≥ 18
-- MySQL 8.x
-- Git
+```
+Node.js ≥ 18
+MySQL 8.x
+Git
+```
 
 ### Installation
 ```bash
-git clone https://github.com/yombisse/docslot-api.git
+git clone <repo>
 cd docslot-api
 npm install
 ```
 
-### Configuration
-Créez `.env` :
+### Configuration `.env`
 ```env
 DB_HOST=localhost
 DB_USER=root
-DB_PASS=yourpassword
-DB_NAME=docslot
-JWT_SECRET=your-super-secret-jwt-key-32chars-min
+DB_PASS=votre-mot-de-passe
+DB_NAME=docslot_db
+JWT_SECRET=votre-cle-jwt-super-secrete-min32car
 SERVER_PORT=3000
 ```
 
-**Importez le schéma :**
+### Base de données
 ```bash
-mysql -u root -p docslot < schema.sql
+mysql -u root -p < schema.sql
+# Crée docslot_db + tables + triggers notifications
 ```
 
 ### Lancement
@@ -55,104 +63,107 @@ npm start
 # ou
 node index.js
 ```
+**API :** `http://localhost:3000/api`
 
-**API disponnible sur :** `http://localhost:3000/api`
-
-### Test rapide
+**Test :**
 ```bash
 curl http://localhost:3000/api
-# → {\"success\":true,\"message\":\"Bienvenue sur l'API DocSlot 🚀\"}
 ```
 
-## 🔑 Authentification
-- **JWT Bearer Token** (exp: 1h)
-- Header : `Authorization: Bearer <token>`
+## 🔑 Authentification (JWT)
+- **Register/Login** → `{token, user}`
+- Header: `Authorization: Bearer <token>`
+- Roles: `patient|medecin|administrateur`
 
-**Flux typique :**
-1. `POST /api/auth/register` → Crée user + profil (patient/medecin)
-2. `POST /api/auth/login` → `{token, user}`
-3. Ajoutez `Authorization: Bearer ${token}` à toutes les routes protégées
+## 📚 Endpoints Complets
 
-## 📚 Documentation des Endpoints
+### Auth `/api/auth` 
+| Méthode | Route | Auth | Desc |
+|---------|-------|------|------|
+| POST | `/register` | ❌ | Inscription (role: patient/medecin) |
+| POST | `/login` | ❌ | Connexion |
+| POST | `/change-password` | ✅ | Changer MDP |
+| POST | `/forgot-password` | ❌ | Reset MDP |
+| POST | `/check-email` | ❌ | Email existe? |
+| POST | `/logout` | ✅ | Logout client-side |
 
-### 1. **Authentification** (`/api/auth`)
-| Méthode | Endpoint | Auth | Description | Corps Exemple | Réponse |
-|---------|----------|------|-------------|---------------|---------|
-| `POST` | `/register` | ❌ | Inscription | `{\"nom\":\"Dupont\",\"prenom\":\"Jean\",\"email\":\"jean@example.com\",\"password\":\"123456\",\"role\":\"patient\"}` | `{success:true, data:{id_user,nom,...}}` |
-| `POST` | `/login` | ❌ | Connexion | `{\"email\":\"...\",\"password\":\"...\"}` | `{success:true, token:\"...\", user:{id,role}}` |
-| `POST` | `/change-password` | ✅ | Changer MDP | `{\"oldPassword\":\"...\",\"newPassword\":\"...\"}` | `{success:true}` |
-| `POST` | `/forgot-password` | ❌ | Reset MDP | `{\"email\":\"...\",\"newPassword\":\"...\"}` | `{success:true}` |
-| `POST` | `/check-email` | ❌ | Vérif email | `{\"email\":\"...\"}` | `{success:true, exists:true/false}` |
+### Users `/api/users`
+| GET | `/` | ✅ | Liste (?role=) |
+| GET | `/profile` | ✅ | Mon profil |
+| PUT | `/` | ✅ | Update profil |
+| DELETE | `/:id` | ✅ | Soft delete |
 
-### 2. **Utilisateurs** (`/api/users`)
-| Méthode | Endpoint | Auth | Description |
-|---------|----------|------|-------------|
-| `GET` | `/` | ✅ | Liste users (`?role=patient/medecin`) |
-| `GET` | `/profile` | ✅ | Mon profil |
-| `PUT` | `/` | ✅ | Update profil |
-| `DELETE` | `/:id` | ✅ | Soft delete |
+### Patients `/api/patients`
+| GET | `/` | ✅ | Liste (?search=) |
+| GET | `/:id` | ✅ | Détails |
+| POST | `/` | ✅ | Créer profil |
+| PUT | `/:id` | ✅ | Update |
+| DELETE | `/:id` | ✅ | Soft delete |
 
-### 3. **Médecins** (`/api/medecins`)
-| Méthode | Endpoint | Auth | Description | Params/Corps |
-|---------|----------|------|-------------|--------------|
-| `GET` | `/` | ✅ | Liste (`?search=Jean`) |
-| `GET` | `/available` | ✅ | Médecins avec créneaux libres |
-| `GET` | `/:id` | ✅ | Détails medecin (id_medecin) |
-| `GET` | `/:id/slots` | ✅ | Créneaux libres |
-| `POST` | `/` | ✅ | Créer médecin |
-| `PUT` | `/:id` | ✅ | Update |
-| `DELETE` | `/:id` | ✅ | Soft delete |
+### Médecins `/api/medecins`
+| GET | `/` | ✅ | Liste |
+| GET | `/available` | ✅ | Avec créneaux libres |
+| GET | `/:id` | ✅ | Détails |
+| GET | `/:id/slots` | ✅ | Créneaux libres |
+| POST | `/` | ✅ | Créer |
+| PUT | `/:id` | ✅ | Update |
+| DELETE | `/:id` | ✅ | Soft delete |
 
-### 4. **Patients** (`/api/patients`)
-| Méthode | Endpoint | Auth | Description |
-|---------|----------|------|-------------|
-| `GET` | `/` | ✅ | Liste (`?search=`) |
-| `GET` | `/:id` | ✅ | Détails (id_patient) |
-| `POST` | `/` | ✅ | Créer/compléter |
-| `PUT` | `/:id` | ✅ | Update infos |
-| `DELETE` | `/:id` | ✅ | Soft delete |
+### Disponibilités `/api/disponibilites`
+| GET | `/mine` | ✅ medecin | Mon planning |
+| GET | `/medecin/:id` | ✅ patient | Créneaux médecin |
+| POST | `/` | ✅ | Ajouter dispo + créneaux auto |
+| PUT | `/:id` | ✅ | Modifier |
+| PUT | `/annuler/:id` | ✅ | Annuler |
 
-### 5. **Disponibilités** (`/api/disponibilites`)
-| Méthode | Endpoint | Auth | Description | Params/Corps |
-|---------|----------|------|-------------|--------------|
-| `GET` | `/mine` | ✅ | Mon planning (médecin) |
-| `GET` | `/medecin/:id` | ✅ | Créneaux libres (patient) |
-| `POST` | `/` | ✅ | Ajouter dispo + créneaux auto |
-| `PUT` | `/:id` | ✅ | Modifier |
-| `PUT` | `/annuler/:id` | ✅ | Annuler |
+### RDV `/api/rendezvous`
+| GET | `/` | ✅ | Tous |
+| GET | `/myrdv?view=agenda|historique` | ✅ | Mes RDV |
+| GET | `/:id` | ✅ | Détails |
+| POST | `/` | ✅ patient | Prendre RDV {id_creneau, motif} |
+| PUT | `/:id/confirm` | ✅ medecin | Confirmer |
+| PUT | `/:id/cancel` | ✅ | Annuler (libère slot) |
 
-### 6. **Rendez-vous** (`/api/rendezvous`)
-| Méthode | Endpoint | Auth | Description | Params/Corps |
-|---------|----------|------|-------------|--------------|
-| `GET` | `/` | ✅ | Tous RDV |
-| `GET` | `/myrdv` | ✅ | Mes RDV (`?view=agenda/historique`) |
-| `GET` | `/:id` | ✅ | Détails |
-| `POST` | `/` | ✅ | Prendre RDV (patient) | `{\"id_creneau\":1, \"motif\":\"Consultation\"}` |
-| `PUT` | `/:id/confirm` | ✅ | Confirmer |
-| `PUT` | `/:id/cancel` | ✅ | Annuler (libère créneau) |
+### Notifications `/api/notifications`
+| GET | `/` | ✅ admin | Toutes |
+| GET | `/me` | ✅ | Mes notifs |
+| GET | `/unread-count` | ✅ | Badge non-lues |
+| GET | `/:id` | ✅ | Détail |
+| PUT | `/:id/read` | ✅ | Marquer lue |
+| PUT | `/read-all` | ✅ | Toutes lues |
+| DELETE | `/:id` | ✅ | Supprimer |
 
-## 💾 Schéma Base de Données (résumé)
+### Admin `/api/admin`
+| GET | `/stats` | ✅ admin | Dashboard (users/RDV/dispos) |
+| GET | `/rdv-stats` | ✅ admin | Stats RDV détaillées |
+
+## 💾 Base de Données `docslot_db`
+
+**Tables principales :**
 ```
-users (id_user PK) ← patients/medecins (1:1)
-disponibilites → creneaux → rendezvous (patients × medecins)
+users (role) ←1:1→ patients/medecins
+disponibilites → creneaux (libre/réservé) ←1:1→ rendezvous (patient × créneau)
+notifications (auto via triggers sur RDV insert/update)
 ```
-- **Soft deletes** : `deleted_at` timestamp.
-- **Statuts** : RDV (en_attente/confirme/annule), Creneaux (libre/reserve/bloque), Dispos (active/annulee).
+- **Triggers :** Notifications auto (nouveau RDV, confirm/annul).
+- **Soft deletes :** `deleted_at`.
+- **Statuts :** RDV (en_attente/confirme/annule), Creneaux (libre/reserve/bloque).
 
-## ❌ Gestion d'erreurs
+## ❌ Erreurs standard
 ```json
-{
-  \"success\": false,
-  \"errors\": {
-    \"general\": \"Message d'erreur\",
-    \"field\": \"Erreur champ\"
-  }
-}
+{ "success": false, "errors": { "general": "Msg", "field": "Erreur champ" } }
 ```
-Codes : 400 (validation), 401 (auth), 404 (non trouvé), 500 (serveur).
+Codes: 400 validation, 401 auth, 404 not found, 500 server.
 
-## 📄 Licence
-Libre et gratuit
+## 🧪 Tests & Dev
+```bash
+npm test  # Placeholder
+```
+
+## 📋 TODO
+Voir [TODO.md](TODO.md)
 
 ## 👨‍💻 Auteur
-FANDIE YOMBISSE
+Fandie Yombisse
+
+**Licence : ISC** - Libre usage/modif/distribution.

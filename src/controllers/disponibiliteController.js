@@ -23,7 +23,16 @@ const disponibiliteController = {
                     ON c.id_creneau = r.id_creneau
                 LEFT JOIN patients p ON r.id_patient = p.id_patient
                 LEFT JOIN users u ON p.id_user = u.id_user
-                WHERE m.id_user = ? AND d.statut = 'active'
+                WHERE 
+                    m.id_user = ?
+                    AND d.statut = 'active'
+                    AND (
+                        d.date_disponibilite > CURDATE()
+                        OR (
+                            d.date_disponibilite = CURDATE()
+                            AND d.heure_fin > CURTIME()
+                        )
+                    )
                 ORDER BY d.date_disponibilite, d.heure_debut, c.heure_creneau
             `, [req.user.id]);
 
@@ -34,30 +43,49 @@ const disponibiliteController = {
         }
     },
 
-    // Voir les créneaux libres d’un médecin pour un patient
-    getDisponibilitesPourPatient: async (req, res) => {
+   getDisponibilitesPourPatient: async (req, res) => {
         try {
-            const { id } = req.params; // id_medecin
+            const { id } = req.params;
 
-            const [rows] = await req.db.query(`
+            const sql = `
                 SELECT 
                     c.id_creneau,
                     c.date_creneau,
                     c.heure_creneau
                 FROM creneaux c
-                INNER JOIN disponibilites d ON c.id_disponibilite = d.id_disponibilite
-                LEFT JOIN rendezvous r ON c.id_creneau = r.id_creneau
-                WHERE d.id_medecin = ? AND r.id_rdv IS NULL AND c.statut='libre'
-                ORDER BY c.date_creneau, c.heure_creneau
-            `, [id]);
+                INNER JOIN disponibilites d 
+                    ON c.id_disponibilite = d.id_disponibilite
+                LEFT JOIN rendezvous r 
+                    ON c.id_creneau = r.id_creneau
+                WHERE 
+                    d.id_medecin = ?
+                    AND d.statut = 'active'
+                    AND r.id_rdv IS NULL
+                    AND c.statut = 'libre'
 
-            res.json({ success: true, data: rows });
+                    -- 🔥 disponibilité encore active
+                    AND CONCAT(d.date_disponibilite, ' ', d.heure_fin) > NOW()
+
+                    -- 🔥 créneaux non passés
+                    AND CONCAT(c.date_creneau, ' ', c.heure_creneau) > NOW()
+
+                ORDER BY c.date_creneau ASC, c.heure_creneau ASC
+            `;
+
+            const [rows] = await req.db.query(sql, [id]);
+
+            return res.json({
+                success: true,
+                data: rows
+            });
 
         } catch (err) {
-            res.status(500).json({ success: false, errors: { general: err.message } });
+            return res.status(500).json({
+                success: false,
+                errors: { general: err.message }
+            });
         }
     },
-
     // Créer une disponibilité et générer les créneaux
     create: async (req, res) => {
         try {
@@ -154,7 +182,6 @@ const disponibiliteController = {
     }
 };
 
-// Génération automatique des créneaux
 async function genererCreneaux(conn, id_disponibilite, duree_creneau) {
     const [rows] = await conn.query(`
         SELECT date_disponibilite, heure_debut, heure_fin
@@ -163,15 +190,26 @@ async function genererCreneaux(conn, id_disponibilite, duree_creneau) {
     `, [id_disponibilite]);
 
     const dispo = rows[0];
-    let debut = new Date(`1970-01-01T${dispo.heure_debut}`);
-    const fin = new Date(`1970-01-01T${dispo.heure_fin}`);
+
+    // 🔥 protection si disponibilité déjà expirée
+    const now = new Date();
+    const finDispo = new Date(`${dispo.date_disponibilite}T${dispo.heure_fin}`);
+
+    if (finDispo <= now) {
+        return; // stop génération
+    }
+
+    let debut = new Date(`${dispo.date_disponibilite}T${dispo.heure_debut}`);
+    const fin = new Date(`${dispo.date_disponibilite}T${dispo.heure_fin}`);
 
     while (debut < fin) {
         const heure = debut.toTimeString().slice(0, 8);
+
         await conn.query(`
             INSERT INTO creneaux (id_disponibilite, date_creneau, heure_creneau)
             VALUES (?, ?, ?)
         `, [id_disponibilite, dispo.date_disponibilite, heure]);
+
         debut.setMinutes(debut.getMinutes() + duree_creneau);
     }
 }

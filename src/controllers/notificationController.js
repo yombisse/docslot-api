@@ -15,21 +15,22 @@ const notificationController = {
         }
     },
 
-    // 📥 Mes notifications (lues + non lues)
+    //  Mes notifications (lues + non lues)
     getMyNotifications: async (req, res) => {
         try {
-            const [results] = await req.db.query(`
+        const [results] = await req.db.query(`
                 SELECT 
-                    id_notification,
-                    message,
-                    type,
-                    lu,
-                    created_at
-                FROM notifications
-                WHERE id_user = ?
-                ORDER BY created_at DESC
+                    n.id_notification,
+                    n.message,
+                    n.type,
+                    n.lu,
+                    n.created_at
+                FROM notifications n
+                JOIN users u ON n.id_user = u.id_user
+                WHERE n.id_user = ? AND u.role = ?
+                ORDER BY n.created_at DESC
                 LIMIT 100
-            `, [req.user.id]);
+            `, [req.user.id, req.user.role]);
 
             res.json({ success: true, data: results });
         } catch (err) {
@@ -133,24 +134,6 @@ const notificationController = {
         }
     },
 
-    // ➕ (Optionnel) créer une notification manuellement (admin / système)
-    create: async (req, res) => {
-        try {
-            const { id_user, type, message } = req.body;
-
-            const [result] = await req.db.query(`
-                INSERT INTO notifications (id_user, type, message)
-                VALUES (?, ?, ?)
-            `, [id_user, type, message]);
-
-            res.status(201).json({
-                success: true,
-                data: { id_notification: result.insertId }
-            });
-        } catch (err) {
-            res.status(400).json({ success: false, errors: { general: err.message } });
-        }
-    }
 
 };
 
