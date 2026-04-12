@@ -16,100 +16,108 @@ const rendezVousController = {
         }
     },
 
-   getMesRdv: async (req, res) => {
-        try {
-            const role = req.user.role;
-            const userId = req.user.id;
-            const view = req.query.view || 'agenda';
+  getMesRdv: async (req, res) => {
+    try {
+        const role = req.user.role;
+        const userId = req.user.id;
+        const view = req.query.view || 'agenda';
 
-            let query = "";
-            let params = [userId];
+        let query = "";
+        let params = [userId];
 
-            if (role === 'patient') {
-                query = `
-                    SELECT 
-                        r.id_rdv,
-                        r.motif,
-                        r.statut,
-                        c.date_creneau AS date_rdv,
-                        c.heure_creneau AS heure_rdv,
-                        m.id_medecin,
-                        mu.nom AS medecin_nom,
-                        mu.prenom AS medecin_prenom
-                    FROM rendezvous r
-                    INNER JOIN creneaux c ON r.id_creneau = c.id_creneau
-                    INNER JOIN disponibilites d ON c.id_disponibilite = d.id_disponibilite
-                    INNER JOIN medecins m ON d.id_medecin = m.id_medecin
-                    INNER JOIN users mu ON m.id_user = mu.id_user
-                    INNER JOIN patients p ON r.id_patient = p.id_patient
-                    WHERE p.id_user = ?
+        if (role === 'patient') {
+            query = `
+                SELECT 
+                    r.id_rdv,
+                    r.motif,
+                    r.statut,
+                    c.date_creneau AS date_rdv,
+                    c.heure_creneau AS heure_rdv,
+                    m.id_medecin,
+                    mu.nom AS medecin_nom,
+                    mu.prenom AS medecin_prenom
+                FROM rendezvous r
+                INNER JOIN creneaux c ON r.id_creneau = c.id_creneau
+                INNER JOIN disponibilites d ON c.id_disponibilite = d.id_disponibilite
+                INNER JOIN medecins m ON d.id_medecin = m.id_medecin
+                INNER JOIN users mu ON m.id_user = mu.id_user
+                INNER JOIN patients p ON r.id_patient = p.id_patient
+                WHERE p.id_user = ?
+            `;
+
+            if (view === 'agenda') {
+                query += `
+                    AND (
+                        TIMESTAMP(c.date_creneau, c.heure_creneau) >= NOW()
+                        AND r.statut IN ('en_attente', 'confirme')
+                    )
                 `;
-
-                if (view === 'agenda') {
-                    query += `
-                        AND (CONCAT(c.date_creneau, ' ', c.heure_creneau) >= NOW()
-                        AND r.statut IN ('en_attente', 'confirme'))
-                    `;
-                }
-
-                if (view === 'historique') {
-                    query += `
-                        AND (CONCAT(c.date_creneau, ' ', c.heure_creneau) < NOW()
-                        OR r.statut = 'annule')
-                    `;
-                }
             }
 
-            else if (role === 'medecin') {
-                query = `
-                    SELECT 
-                        r.id_rdv,
-                        r.motif,
-                        r.statut,
-                        c.date_creneau AS date_rdv,
-                        c.heure_creneau AS heure_rdv,
-                        p.id_patient,
-                        pu.nom AS patient_nom,
-                        pu.prenom AS patient_prenom
-                    FROM rendezvous r
-                    INNER JOIN creneaux c ON r.id_creneau = c.id_creneau
-                    INNER JOIN disponibilites d ON c.id_disponibilite = d.id_disponibilite
-                    INNER JOIN medecins m ON d.id_medecin = m.id_medecin
-                    INNER JOIN patients p ON r.id_patient = p.id_patient
-                    INNER JOIN users pu ON p.id_user = pu.id_user
-                    WHERE m.id_user = ?
+            if (view === 'historique') {
+                query += `
+                    AND (
+                        TIMESTAMP(c.date_creneau, c.heure_creneau) < NOW()
+                        OR r.statut = 'annule'
+                    )
                 `;
-
-                if (view === 'agenda') {
-                    query += `
-                        AND (CONCAT(c.date_creneau, ' ', c.heure_creneau) >= NOW()
-                        AND r.statut IN ('en_attente', 'confirme'))
-                    `;
-                }
-
-                if (view === 'historique') {
-                    query += `
-                        AND (CONCAT(c.date_creneau, ' ', c.heure_creneau) < NOW()
-                        OR r.statut = 'annule')
-                    `;
-                }
             }
-
-            const [results] = await req.db.query(query, params);
-
-            return res.json({
-                success: true,
-                data: results
-            });
-
-        } catch (err) {
-            console.error(err);
-            return res.status(500).json({
-                success: false,
-                errors: { general: err.message }
-            });
         }
-    },
+
+        else if (role === 'medecin') {
+            query = `
+                SELECT 
+                    r.id_rdv,
+                    r.motif,
+                    r.statut,
+                    c.date_creneau AS date_rdv,
+                    c.heure_creneau AS heure_rdv,
+                    p.id_patient,
+                    pu.nom AS patient_nom,
+                    pu.prenom AS patient_prenom
+                FROM rendezvous r
+                INNER JOIN creneaux c ON r.id_creneau = c.id_creneau
+                INNER JOIN disponibilites d ON c.id_disponibilite = d.id_disponibilite
+                INNER JOIN medecins m ON d.id_medecin = m.id_medecin
+                INNER JOIN patients p ON r.id_patient = p.id_patient
+                INNER JOIN users pu ON p.id_user = pu.id_user
+                WHERE m.id_user = ?
+            `;
+
+            if (view === 'agenda') {
+                query += `
+                    AND (
+                        TIMESTAMP(c.date_creneau, c.heure_creneau) >= NOW()
+                        AND r.statut IN ('en_attente', 'confirme')
+                    )
+                `;
+            }
+
+            if (view === 'historique') {
+                query += `
+                    AND (
+                        TIMESTAMP(c.date_creneau, c.heure_creneau) < NOW()
+                        OR r.statut = 'annule'
+                    )
+                `;
+            }
+        }
+
+        const [results] = await req.db.query(query, params);
+
+        return res.json({
+            success: true,
+            data: results
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            errors: { general: err.message }
+        });
+    }
+},
         getById: async (req, res) => {
         try {
             const [results] = await req.db.query(`

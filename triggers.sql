@@ -10,15 +10,15 @@ BEGIN
 
     DECLARE patient_prenom VARCHAR(50);
     DECLARE patient_nom VARCHAR(50);
+    DECLARE patient_user_id INT;
 
     DECLARE medecin_prenom VARCHAR(50);
     DECLARE medecin_nom VARCHAR(50);
-
     DECLARE medecin_user_id INT;
 
-    -- PATIENT
-    SELECT u.prenom, u.nom
-    INTO patient_prenom, patient_nom
+    -- PATIENT + USER ID
+    SELECT u.id_user, u.prenom, u.nom
+    INTO patient_user_id, patient_prenom, patient_nom
     FROM patients p
     JOIN users u ON p.id_user = u.id_user
     WHERE p.id_patient = NEW.id_patient;
@@ -32,10 +32,10 @@ BEGIN
     JOIN users u ON m.id_user = u.id_user
     WHERE c.id_creneau = NEW.id_creneau;
 
-    -- NOTIF PATIENT
+    -- NOTIF PATIENT ✅
     INSERT INTO notifications (id_user, type, message, lu, target_role)
     VALUES (
-        NEW.id_patient,
+        patient_user_id,
         'new_rdv',
         CONCAT(patient_prenom, ' ', patient_nom,
             ', votre rendez-vous avec Dr ',
@@ -45,7 +45,7 @@ BEGIN
         'patient'
     );
 
-    -- NOTIF MEDECIN
+    -- NOTIF MEDECIN ✅
     INSERT INTO notifications (id_user, type, message, lu, target_role)
     VALUES (
         medecin_user_id,
@@ -66,22 +66,20 @@ BEGIN
 
     DECLARE patient_prenom VARCHAR(50);
     DECLARE patient_nom VARCHAR(50);
+    DECLARE patient_user_id INT;
 
     DECLARE medecin_prenom VARCHAR(50);
     DECLARE medecin_nom VARCHAR(50);
-
     DECLARE medecin_user_id INT;
 
     IF NEW.statut <> OLD.statut THEN
 
-        -- PATIENT
-        SELECT u.prenom, u.nom
-        INTO patient_prenom, patient_nom
+        SELECT u.id_user, u.prenom, u.nom
+        INTO patient_user_id, patient_prenom, patient_nom
         FROM patients p
         JOIN users u ON p.id_user = u.id_user
         WHERE p.id_patient = NEW.id_patient;
 
-        -- MEDECIN + USER ID
         SELECT u.id_user, u.prenom, u.nom
         INTO medecin_user_id, medecin_prenom, medecin_nom
         FROM creneaux c
@@ -90,12 +88,10 @@ BEGIN
         JOIN users u ON m.id_user = u.id_user
         WHERE c.id_creneau = NEW.id_creneau;
 
-        -- CONFIRMATION
         IF NEW.statut = 'confirme' THEN
-
             INSERT INTO notifications (id_user, type, message, lu, target_role)
             VALUES (
-                NEW.id_patient,
+                patient_user_id,
                 'rdv_confirme',
                 CONCAT(patient_prenom, ' ', patient_nom,
                     ', votre rendez-vous avec Dr ',
@@ -104,16 +100,13 @@ BEGIN
                 0,
                 'patient'
             );
-
         END IF;
 
-        -- ANNULATION
         IF NEW.statut = 'annule' THEN
 
-            -- PATIENT
             INSERT INTO notifications (id_user, type, message, lu, target_role)
             VALUES (
-                NEW.id_patient,
+                patient_user_id,
                 'rdv_annule',
                 CONCAT(patient_prenom, ' ', patient_nom,
                     ', votre rendez-vous avec Dr ',
@@ -123,7 +116,6 @@ BEGIN
                 'patient'
             );
 
-            -- MEDECIN
             INSERT INTO notifications (id_user, type, message, lu, target_role)
             VALUES (
                 medecin_user_id,

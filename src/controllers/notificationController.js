@@ -15,29 +15,32 @@ const notificationController = {
         }
     },
 
-    //  Mes notifications (lues + non lues)
-    getMyNotifications: async (req, res) => {
-        try {
+   getMyNotifications: async (req, res) => {
+    try {
         const [results] = await req.db.query(`
-                SELECT 
-                    n.id_notification,
-                    n.message,
-                    n.type,
-                    n.lu,
-                    n.created_at
-                FROM notifications n
-                JOIN users u ON n.id_user = u.id_user
-                WHERE n.id_user = ? AND u.role = ?
-                ORDER BY n.created_at DESC
-                LIMIT 100
-            `, [req.user.id, req.user.role]);
+            SELECT 
+                n.id_notification,
+                n.message,
+                n.type,
+                n.lu,
+                n.created_at
+            FROM notifications n
+            JOIN users u ON n.id_user = u.id_user
+            WHERE n.id_user = ?
+              AND n.target_role = ?
+              AND u.deleted_at IS NULL
+            ORDER BY n.created_at DESC
+            LIMIT 100
+        `, [req.user.id, req.user.role]);
 
-            res.json({ success: true, data: results });
-        } catch (err) {
-            res.status(500).json({ success: false, errors: { general: err.message } });
-        }
-    },
-
+        res.json({ success: true, data: results });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            errors: { general: err.message }
+        });
+    }
+},
     // 🔎 Détail d'une notification (sécurisé)
     getById: async (req, res) => {
         try {

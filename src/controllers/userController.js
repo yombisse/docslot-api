@@ -138,44 +138,100 @@ const userController = {
         return res.status(500).json({ success: false, errors: { general: err.message } });
     }
 },
-
     update: async (req, res) => {
         try {
-            const { nom, prenom, email, password, telephone, profile_url, adresse, sexe, date_naissance, specialite, duree_creneau } = req.body || {};
-            const userId = req.user.id;
-            const role = req.user.role;
+            const {
+                id_user,
+                nom,
+                prenom,
+                email,
+                password,
+                telephone,
+                profile_url,
+                adresse,
+                sexe,
+                date_naissance,
+                specialite,
+                duree_creneau,
+                role
+            } = req.body || {};
 
-            const [current] = await req.db.query("SELECT * FROM users WHERE id_user=?", [userId]);
-            if (!current.length) return res.status(404).json({ success: false, errors: { general: "Utilisateur introuvable" } });
+            const userId = id_user;
 
-            const existingUser = current[0];
-            const hashedPassword = password && password.trim() !== "" ? await bcrypt.hash(password, 10) : existingUser.password;
-
-            await req.db.query(
-                `UPDATE users SET nom=?, prenom=?, email=?, password=?, telephone=?, profile_url=? WHERE id_user=?`,
-                [nom ?? existingUser.nom, prenom ?? existingUser.prenom, email ?? existingUser.email, hashedPassword,
-                 telephone ?? existingUser.telephone, profile_url ?? existingUser.profile_url, userId]
+            const [current] = await req.db.query(
+                "SELECT * FROM users WHERE id_user=?",
+                [userId]
             );
 
-            if (role === 'patient') {
+            if (!current.length) {
+                return res.status(404).json({
+                    success: false,
+                    errors: { general: "Utilisateur introuvable" }
+                });
+            }
+
+            const existingUser = current[0];
+
+            const hashedPassword =
+                password && password.trim() !== ""
+                    ? await bcrypt.hash(password, 10)
+                    : existingUser.password;
+
+            await req.db.query(
+                `UPDATE users 
+                SET nom=?, prenom=?, email=?, password=?, telephone=?, profile_url=? 
+                WHERE id_user=?`,
+                [
+                    nom ?? existingUser.nom,
+                    prenom ?? existingUser.prenom,
+                    email ?? existingUser.email,
+                    hashedPassword,
+                    telephone ?? existingUser.telephone,
+                    profile_url ?? existingUser.profile_url,
+                    userId
+                ]
+            );
+
+            if (role === "patient") {
                 await req.db.query(
-                    `UPDATE patients SET adresse=?, sexe=?, date_naissance=? WHERE id_user=?`,
-                    [adresse, sexe, date_naissance, userId]
-                );
-            } else if (role === 'medecin') {
-                await req.db.query(
-                    `UPDATE medecins SET specialite=?, duree_creneau=? WHERE id_user=?`,
-                    [specialite, duree_creneau, userId]
+                    `UPDATE patients 
+                    SET adresse=?, sexe=?, date_naissance=? 
+                    WHERE id_user=?`,
+                    [
+                        adresse ?? null,
+                        sexe ?? null,
+                        date_naissance ?? null,
+                        userId
+                    ]
                 );
             }
 
-            return res.json({ success: true, message: "Profil mis à jour" });
+            if (role === "medecin") {
+                await req.db.query(
+                    `UPDATE medecins 
+                    SET specialite=?, duree_creneau=? 
+                    WHERE id_user=?`,
+                    [
+                        specialite ?? null,
+                        duree_creneau ?? 30,
+                        userId
+                    ]
+                );
+            }
+
+            return res.json({
+                success: true,
+                message: "Profil mis à jour"
+            });
 
         } catch (err) {
-            return res.status(500).json({ success: false, errors: { general: err.message } });
+            console.log("UPDATE ERROR:", err);
+            return res.status(500).json({
+                success: false,
+                errors: { general: err.message }
+            });
         }
     },
-
     // ================== SOFT DELETE ==================
     softDelete: async (req, res) => {
         try {
