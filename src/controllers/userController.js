@@ -134,7 +134,6 @@ const userController = {
         });
 
     } catch (err) {
-        console.error("Erreur création utilisateur:", err);
         return res.status(500).json({ success: false, errors: { general: err.message } });
     }
 },
@@ -225,7 +224,6 @@ const userController = {
             });
 
         } catch (err) {
-            console.log("UPDATE ERROR:", err);
             return res.status(500).json({
                 success: false,
                 errors: { general: err.message }

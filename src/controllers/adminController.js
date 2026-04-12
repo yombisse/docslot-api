@@ -27,7 +27,6 @@ const adminController = {
             });
 
         } catch (err) {
-            console.error('Dashboard stats error:', err);
             res.status(500).json({ 
                 success: false, 
                 errors: { general: err.message } 

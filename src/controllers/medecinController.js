@@ -161,7 +161,6 @@ const medecinController = {
             });
 
         } catch (err) {
-            console.error('getAvailableSlotsByMedecin error:', err);
             return res.status(500).json({
                 success: false,
                 errors: { general: err.message }

@@ -214,7 +214,6 @@ async function genererCreneaux(conn, id_disponibilite, duree) {
     try {
 
         if (!duree || duree > 30) {
-            console.log("❌ durée invalide (>30 min)");
             return;
         }
 
@@ -261,12 +260,9 @@ async function genererCreneaux(conn, id_disponibilite, duree) {
                 INSERT INTO creneaux (id_disponibilite, date_creneau, heure_creneau, statut)
                 VALUES ?
             `, [values]);
-
-            console.log(`✅ ${values.length} créneaux générés (${duree} min)`);
         }
 
     } catch (err) {
-        console.error("❌ genererCreneaux:", err.message);
         throw err;
     }
 }
