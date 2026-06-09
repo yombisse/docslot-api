@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: true }));
     connection.release();
   } catch (err) {
     console.error("Erreur de connexion à la base de données:", err.message);
-    process.exit(1); // ← l'app s'arrête ici si DB inaccessible
+    
   }
 })();
 

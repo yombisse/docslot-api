@@ -1,10 +1,10 @@
 // middleware/RendezVousValidator.js
 
 const validateCreateRendezVous = (req, res, next) => {
-    const { id_creneau } = req.body;
+    const id_creneau = parseInt(req.body.id_creneau);
     const errors = {};
 
-    if (!id_creneau || !Number.isInteger(id_creneau) || id_creneau <= 0) {
+    if (!id_creneau || isNaN(id_creneau) || id_creneau <= 0) {
         errors.id_creneau = "ID créneau obligatoire et entier positif.";
     }
 
@@ -12,6 +12,7 @@ const validateCreateRendezVous = (req, res, next) => {
         return res.status(400).json({ success: false, errors });
     }
 
+    req.body.id_creneau = id_creneau; // normalisation
     next();
 };
 

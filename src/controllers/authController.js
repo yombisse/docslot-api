@@ -69,7 +69,7 @@ const authController = {
         }
     },
 
-    // ================== LOGIN (FIX IMPORTANT) ==================
+  
     login: async (req, res) => {
         try {
             const { email, password } = req.body;
